@@ -44,7 +44,7 @@ impl Meta {
 pub struct Plot {
     pub meta: Meta,
     pub path: String,
-    pub fh: File,
+    pub fh: Option<File>,
     read_offset: u64,
     use_direct_io: bool,
     sector_size: u64,
@@ -145,7 +145,7 @@ impl Plot {
                 nonces,
                 name: plot_file_name,
             },
-            fh,
+            fh: Some(fh),
             path: file_path,
             read_offset: 0,
             use_direct_io,
@@ -161,16 +161,16 @@ impl Plot {
 
         // reopening file handles
         if !self.use_direct_io {
-            self.fh = open(&self.path)?;
+            self.fh = Some(open(&self.path)?);
         } else {
-            self.fh = open_using_direct_io(&self.path)?;
+            self.fh = Some(open_using_direct_io(&self.path)?);
         };
 
         if self.use_direct_io {
             self.read_offset = self.round_seek_addr(&mut seek_addr);
         }
 
-        self.fh.seek(SeekFrom::Start(seek_addr))
+        self.fh.as_ref().unwrap().seek(SeekFrom::Start(seek_addr))
     }
 
     pub fn read(&mut self, bs: &mut Vec<u8>, scoop: u32) -> Result<(usize, u64, bool), io::Error> {
@@ -199,8 +199,8 @@ impl Plot {
         let seek_addr =
             SeekFrom::Start(offset as u64 + u64::from(scoop) * nonces as u64 * SCOOP_SIZE);
         if !self.dummy {
-            self.fh.seek(seek_addr)?;
-            self.fh.read_exact(&mut bs[0..bytes_to_read])?;
+            self.fh.as_ref().unwrap().seek(seek_addr)?;
+            self.fh.as_ref().unwrap().read_exact(&mut bs[0..bytes_to_read])?;
             // interrupt avoider (not implemented)
             // let read_chunk_size_in_nonces = 65536;
             // for i in (0..bytes_to_read).step_by(read_chunk_size_in_nonces) {
@@ -223,7 +223,8 @@ impl Plot {
             self.round_seek_addr(&mut seek_addr);
         }
 
-        self.fh.seek(SeekFrom::Start(seek_addr))
+        self.prepare(0)?;
+        self.fh.as_ref().unwrap().seek(SeekFrom::Start(seek_addr))
     }
 
     fn round_seek_addr(&mut self, seek_addr: &mut u64) -> u64 {

@@ -161,6 +161,8 @@ impl Reader {
                         p.meta.name, e
                     );
                 }
+
+                p.fh = None;
             });
         }
     }
@@ -334,6 +336,8 @@ impl Reader {
                         break 'inner;
                     }
                 }
+
+                p.fh = None;
             }
         })
     }

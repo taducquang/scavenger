@@ -209,7 +209,7 @@ fn scan_plots(
         .drain()
         .map(|(drive_id, mut plots)| {
             plots.sort_by_key(|p| {
-                let m = p.lock().unwrap().fh.metadata().unwrap();
+                let m = p.lock().unwrap().fh.as_ref().unwrap().metadata().unwrap();
                 -FileTime::from_last_modification_time(&m).unix_seconds()
             });
             (drive_id, Arc::new(plots))
